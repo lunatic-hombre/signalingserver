@@ -1,17 +1,13 @@
 package chat.cm9k;
 
+import com.jsoniter.output.JsonStream;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.core.*;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+
 import java.security.InvalidParameterException;
 import java.util.HashSet;
 import java.util.Set;
-
-import com.jsoniter.output.JsonStream;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 public class SignalingCallback implements WebSocketConnectionCallback {
 
@@ -55,26 +51,23 @@ public class SignalingCallback implements WebSocketConnectionCallback {
             
 			@Override
             protected void onClose(WebSocketChannel channel, StreamSourceFrameChannel frameChannel) {
-                System.out.println("Socket closed");
                 sendToAllPeers(channel, "BYE " + channel.getAttribute(CLIENT_ID));
             }
         };
     }
-	public static String parseCommand(String message) {
-		String [] parts = message.split(" ");
-		assert(parts.length >= 3);
-		return parts[0];
-	}
-	public static String parseFromClientId(String message) {
-		String [] parts = message.split(" ");
-		assert(parts.length >= 3);
-		return parts[1];
+
+	static String parseCommand(String message) {
+        return message.split(" ")[0];
 	}
 
-	public static String parseToClientId(String message) {
+    static String parseFromClientId(String message) {
 		String [] parts = message.split(" ");
-		assert(parts.length >= 4);
-		return parts[2];
+		return parts.length >= 3 ? parts[1] : null;
+	}
+
+	static String parseToClientId(String message) {
+		String [] parts = message.split(" ");
+		return parts.length >= 4 ? parts[2] : null;
 	}
 
     private void handleHelloCommand(WebSocketChannel channel, String messageString) {
@@ -85,7 +78,7 @@ public class SignalingCallback implements WebSocketConnectionCallback {
 	}
 
     private void handleOfferCommand(WebSocketChannel channel, String messageString) {
-        sendOnlyToFromClientId(channel, messageString);
+        sendOnlyToToClientId(channel, messageString);
 	}
 
     private void handleAnswerCommand(WebSocketChannel channel, String messageString) {
@@ -93,15 +86,15 @@ public class SignalingCallback implements WebSocketConnectionCallback {
 	}
 
     private void handleIceCommand(WebSocketChannel channel, String messageString) {
-        sendOnlyToFromClientId(channel, messageString);
+        sendOnlyToToClientId(channel, messageString);
 	}
 
 	private void handleTalkCommand(WebSocketChannel channel, String messageString) {
-		sendToAllPeers(channel, messageString);
+		sendToAllPeersExceptFromClientId(channel, messageString);
 	}
 
     private void handleWhoCommand(WebSocketChannel channel) {
-    	sendToAllPeers( channel, JsonStream.serialize(clients));
+		WebSockets.sendText(JsonStream.serialize(clients), channel, null);
 	}
     
 	private void sendToAllPeers(WebSocketChannel channel, String messageString) {
@@ -114,17 +107,7 @@ public class SignalingCallback implements WebSocketConnectionCallback {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
 			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
 			String messageClientId = parseFromClientId(messageString);
-			if ( ! messageClientId.equals(channelClientId)) {
-				WebSockets.sendText(messageString, peer, null);
-			}
-        }
-	}
-
-	private void sendOnlyToFromClientId(WebSocketChannel channel, String messageString) {
-		for (WebSocketChannel peer : channel.getPeerConnections()) {
-			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
-			String messageClientId = parseFromClientId(messageString);
-			if ( messageClientId.equals(channelClientId)) {
+			if (!messageClientId.equals(channelClientId)) {
 				WebSockets.sendText(messageString, peer, null);
 			}
         }
@@ -134,7 +117,7 @@ public class SignalingCallback implements WebSocketConnectionCallback {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
 			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
 			String messageClientId = parseToClientId(messageString);
-			if ( messageClientId.equals(channelClientId)) {
+			if (messageClientId == null || messageClientId.equals(channelClientId)) {
 				WebSockets.sendText(messageString, peer, null);
 			}
         }
