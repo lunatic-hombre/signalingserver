@@ -1,5 +1,7 @@
 /target/
 /bin/
+/lib/
 /.settings/
 /.classpath
 /.project
+*.jar
