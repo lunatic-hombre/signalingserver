@@ -37,6 +37,10 @@ private static Set<String> clients = new HashSet<>();
             			break;
                 	case "ANSWER": handleAnswerCommand(channel, messageString);
             			break;
+                    case "ICE": handleIceCommand(channel, messageString);
+                        break;
+	                case "TALK": handleTalkCommand(channel, messageString);
+		                break;
                 	case "WHO": handleWhoCommand(channel);
                 		break;
                 	default:
@@ -66,6 +70,14 @@ private static Set<String> clients = new HashSet<>();
 
     private void handleAnswerCommand(WebSocketChannel channel, String messageString) {
         sendToAllPeers(channel, messageString);
+	}
+
+    private void handleIceCommand(WebSocketChannel channel, String messageString) {
+        sendToAllPeers(channel, messageString);
+    }
+
+	private void handleTalkCommand(WebSocketChannel channel, String messageString) {
+		sendToAllPeers(channel, messageString);
 	}
 
     private void handleWhoCommand(WebSocketChannel channel) {
