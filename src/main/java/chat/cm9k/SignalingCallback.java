@@ -50,7 +50,7 @@ private static Set<String> clients = new HashSet<>();
             }
         };
     }
-	private String parseCommand(String messageString) {
+	public static String parseCommand(String messageString) {
 		String [] pieces = messageString.split(" ");
 		return pieces[0];
 	}
