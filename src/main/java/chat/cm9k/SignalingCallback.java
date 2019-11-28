@@ -54,27 +54,41 @@ private static Set<String> clients = new HashSet<>();
             }
         };
     }
-	public static String parseCommand(String messageString) {
-		String [] pieces = messageString.split(" ");
-		return pieces[0];
+	public static String parseCommand(String message) {
+		String [] parts = message.split(" ");
+		assert(parts.length >= 3);
+		return parts[0];
+	}
+	public static String parseFromClientId(String message) {
+		String [] parts = message.split(" ");
+		assert(parts.length >= 3);
+		return parts[1];
+	}
+
+	public static String parseToClientId(String message) {
+		String [] parts = message.split(" ");
+		assert(parts.length >= 4);
+		return parts[2];
 	}
 
     private void handleHelloCommand(WebSocketChannel channel, String messageString) {
-        sendToAllPeers(channel, messageString);
+    	// Remember the client-id. We will use it to determine whom to send messages
+    	channel.setAttribute("client-id", parseFromClientId(messageString));
+        sendToAllPeersExceptFromClientId(channel, messageString);
 		clients.add(messageString);
 	}
 
     private void handleOfferCommand(WebSocketChannel channel, String messageString) {
-        sendToAllPeers(channel, messageString);
+        sendOnlyToFromClientId(channel, messageString);
 	}
 
     private void handleAnswerCommand(WebSocketChannel channel, String messageString) {
-        sendToAllPeers(channel, messageString);
+        sendOnlyToToClientId(channel, messageString);
 	}
 
     private void handleIceCommand(WebSocketChannel channel, String messageString) {
-        sendToAllPeers(channel, messageString);
-    }
+        sendOnlyToFromClientId(channel, messageString);
+	}
 
 	private void handleTalkCommand(WebSocketChannel channel, String messageString) {
 		sendToAllPeers(channel, messageString);
@@ -86,7 +100,37 @@ private static Set<String> clients = new HashSet<>();
     
 	private void sendToAllPeers(WebSocketChannel channel, String messageString) {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
-            WebSockets.sendText(messageString, peer, null);
+			WebSockets.sendText(messageString, peer, null);
+        }
+	}
+
+	private void sendToAllPeersExceptFromClientId(WebSocketChannel channel, String messageString) {
+		for (WebSocketChannel peer : channel.getPeerConnections()) {
+			String channelClientId = (String) peer.getAttribute("client-id");
+			String messageClientId = parseFromClientId(messageString);
+			if ( ! messageClientId.equals(channelClientId)) {
+				WebSockets.sendText(messageString, peer, null);
+			}
+        }
+	}
+
+	private void sendOnlyToFromClientId(WebSocketChannel channel, String messageString) {
+		for (WebSocketChannel peer : channel.getPeerConnections()) {
+			String channelClientId = (String) peer.getAttribute("client-id");
+			String messageClientId = parseFromClientId(messageString);
+			if ( messageClientId.equals(channelClientId)) {
+				WebSockets.sendText(messageString, peer, null);
+			}
+        }
+	}
+
+	private void sendOnlyToToClientId(WebSocketChannel channel, String messageString) {
+		for (WebSocketChannel peer : channel.getPeerConnections()) {
+			String channelClientId = (String) peer.getAttribute("client-id");
+			String messageClientId = parseToClientId(messageString);
+			if ( messageClientId.equals(channelClientId)) {
+				WebSockets.sendText(messageString, peer, null);
+			}
         }
 	}
 
