@@ -5,14 +5,19 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.jsoniter.output.JsonStream;
-
 import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.core.*;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 public class SignalingCallback implements WebSocketConnectionCallback {
 
-private static Set<String> clients = new HashSet<>();
+	private static final String CLIENT_ID = "client-id";
+
+	private static Set<String> clients = new HashSet<>();
 
     public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
         String path = exchange.getRequestURI();
@@ -49,8 +54,9 @@ private static Set<String> clients = new HashSet<>();
             }
             
 			@Override
-            protected void onClose(WebSocketChannel webSocketChannel, StreamSourceFrameChannel channel) {
+            protected void onClose(WebSocketChannel channel, StreamSourceFrameChannel frameChannel) {
                 System.out.println("Socket closed");
+                sendToAllPeers(channel, "BYE " + channel.getAttribute(CLIENT_ID));
             }
         };
     }
@@ -73,7 +79,7 @@ private static Set<String> clients = new HashSet<>();
 
     private void handleHelloCommand(WebSocketChannel channel, String messageString) {
     	// Remember the client-id. We will use it to determine whom to send messages
-    	channel.setAttribute("client-id", parseFromClientId(messageString));
+    	channel.setAttribute(CLIENT_ID, parseFromClientId(messageString));
         sendToAllPeersExceptFromClientId(channel, messageString);
 		clients.add(messageString);
 	}
@@ -106,7 +112,7 @@ private static Set<String> clients = new HashSet<>();
 
 	private void sendToAllPeersExceptFromClientId(WebSocketChannel channel, String messageString) {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
-			String channelClientId = (String) peer.getAttribute("client-id");
+			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
 			String messageClientId = parseFromClientId(messageString);
 			if ( ! messageClientId.equals(channelClientId)) {
 				WebSockets.sendText(messageString, peer, null);
@@ -116,7 +122,7 @@ private static Set<String> clients = new HashSet<>();
 
 	private void sendOnlyToFromClientId(WebSocketChannel channel, String messageString) {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
-			String channelClientId = (String) peer.getAttribute("client-id");
+			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
 			String messageClientId = parseFromClientId(messageString);
 			if ( messageClientId.equals(channelClientId)) {
 				WebSockets.sendText(messageString, peer, null);
@@ -126,7 +132,7 @@ private static Set<String> clients = new HashSet<>();
 
 	private void sendOnlyToToClientId(WebSocketChannel channel, String messageString) {
 		for (WebSocketChannel peer : channel.getPeerConnections()) {
-			String channelClientId = (String) peer.getAttribute("client-id");
+			String channelClientId = (String) peer.getAttribute(CLIENT_ID);
 			String messageClientId = parseToClientId(messageString);
 			if ( messageClientId.equals(channelClientId)) {
 				WebSockets.sendText(messageString, peer, null);

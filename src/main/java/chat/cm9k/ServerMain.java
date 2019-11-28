@@ -16,7 +16,7 @@ public class ServerMain {
                     // TLS 1.3 causes infinite loop in SSL handshake https://issues.jboss.org/browse/UNDERTOW-1422
                     .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of("TLSv1.2"))
                     .setHandler(websocket(new SignalingCallback()))
-                    .addHttpListener(8888, "127.0.0.1")
+                    .addHttpListener(8080, "127.0.0.1")
                     .build();
             server.start();
         } catch (Exception e) {
