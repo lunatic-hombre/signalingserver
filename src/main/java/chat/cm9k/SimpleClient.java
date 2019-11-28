@@ -12,11 +12,13 @@ public class SimpleClient{
 		new SimpleClient().run();
 	}
 public void run() throws URISyntaxException {
+	
 	final SimpleWebSocketClient client = new SimpleWebSocketClient("ws://localhost:8888/echo");
 	client.setWebSocketHandler(new WebSocketHandlerAdapter() {
+		
 		@Override
 		public void onOpen() {
-			//client.sendText("Hello"); // ship it!!
+			//client.sendText("Hello"); // You can immediately send text here
 		}
 	
 		@Override
@@ -30,10 +32,10 @@ public void run() throws URISyntaxException {
 					System.out.println("OFFER received");
 					break;
 				case "ANSWER":
-					System.out.println("OFFER received");
+					System.out.println("ANSWER received");
 					break;
 				case "WHO":
-					System.out.println("OFFER received");
+					System.out.println("WHO received");
 					break;
 				default:
 					throw new InvalidParameterException("Invalid command: " + command);
